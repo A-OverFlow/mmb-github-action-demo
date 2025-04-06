@@ -35,9 +35,9 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v3
 
-      # 빌드 단계에서 생성된 JAR 파일을 가져옴
-      - name: Copy build artifacts to the current directory
-        run: cp build/libs/*.jar .
+      # 빌드 단계에서 생성된 JAR 파일을 복사하고 이름 고정
+      - name: Copy and rename JAR file
+        run: cp build/libs/*.jar app.jar
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
