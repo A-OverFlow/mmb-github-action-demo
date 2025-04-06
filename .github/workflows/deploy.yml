@@ -3,8 +3,6 @@ on:
   pull_request:
     types: [opened, synchronize, closed]
     branches: [develop, main]
-    paths:
-      - 'demo/src/**'
 
 jobs:
   test:
