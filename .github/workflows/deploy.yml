@@ -58,15 +58,11 @@ jobs:
           fi
 
       - name: Check environment
-        run: echo "Environment: ${{ steps.set-env.outputs.environment }}"
+        run: echo "Environment from output: ${{ steps.set-env.outputs.environment }}"
 
   image-build:
     runs-on: ubuntu-latest
     needs: [build, set-environment]
-    strategy:
-      matrix:
-        environment: ["${{ needs.set-environment.outputs.environment }}"]
-    environment: ${{ matrix.environment }}
     steps:
       - name: Checkout the code
         uses: actions/checkout@v3
@@ -75,7 +71,7 @@ jobs:
       - name: Find the latest JAR file
         id: jar
         run: |
-          JAR_PATH=$(ls build/libs/*SNAPSHOT.jar | head -n 1)
+          JAR_PATH=$(ls build/libs/*.jar | head -n 1)
           echo "JAR_PATH=$JAR_PATH" >> $GITHUB_ENV
           echo "Latest JAR file: $JAR_PATH"
 
@@ -93,14 +89,13 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [image-build]
-    strategy:
-      matrix:
-        environment: ["${{ needs.set-environment.outputs.environment }}"]
-    environment: ${{ matrix.environment }}
+    needs: [image-build, set-environment]
     steps:
       - name: Checkout the code
         uses: actions/checkout@v3
+
+      - name: Check environment value
+        run: echo "Deploying to ${{ needs.set-environment.outputs.environment }} environment"
 
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v0.1.6
@@ -112,7 +107,7 @@ jobs:
             sudo docker pull myeongseob91/github_action_demo:${{ github.sha }}
             sudo docker stop app || true
             sudo docker rm app || true
-            if [ "${{ matrix.environment }}" == "prod" ]; then
+            if [ "${{ needs.set-environment.outputs.environment }}" == "prod" ]; then
               sudo docker run -d --name app -p 9090:8080 myeongseob91/github_action_demo:${{ github.sha }}
             else
               sudo docker run -d --name app -p 8071:8080 myeongseob91/github_action_demo:${{ github.sha }}
