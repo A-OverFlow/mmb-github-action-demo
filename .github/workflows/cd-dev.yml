@@ -40,4 +40,4 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/my-app:dev
             docker stop my-app-dev || true
             docker rm my-app-dev || true
-            docker run -d --name my-app-dev -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/my-app:dev
+            docker run -d --name my-app-dev -p 8089:8089 ${{ secrets.DOCKER_USERNAME }}/my-app:dev
