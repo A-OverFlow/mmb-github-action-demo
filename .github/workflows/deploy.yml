@@ -22,11 +22,32 @@ jobs:
       - name: Grant execute permission to Gradle
         run: chmod +x ./gradlew
 
-      - name: Build with Gradle
+      - name: Clean and Build with Gradle
         run: ./gradlew clean build
 
-      - name: List generated JAR files
-        run: ls -al build/libs
+      # 빌드 결과 확인
+      - name: Check JAR file existence
+        run: |
+          echo "Checking build/libs directory..."
+          ls -al build/libs || echo "No JAR file found!"
+
+  set-environment:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+    steps:
+      - name: Set environment variable
+        id: set-env
+        run: |
+          echo "Base branch: ${{ github.base_ref }}"
+          if [[ ${{ github.base_ref }} == "main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+      - name: Check environment
+        run: echo ${{ steps.set-env.outputs.environment }}
 
   image-build:
     runs-on: ubuntu-latest
@@ -35,16 +56,24 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v3
 
-      # 빌드 단계에서 생성된 JAR 파일을 복사하고 이름 고정
-      - name: Copy and rename JAR file
-        run: cp build/libs/*.jar app.jar
+      # 최신 실행 가능한 JAR 파일을 찾기
+      - name: Find the latest JAR file
+        id: jar
+        run: |
+          # 가장 최신의 실행 가능한 JAR 파일 찾기
+          JAR_PATH=$(ls build/libs/*SNAPSHOT.jar | head -n 1)
+          echo "JAR_PATH=$JAR_PATH" >> $GITHUB_ENV
+          echo "Latest JAR file: $JAR_PATH"
 
+      # Docker 로그인
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+      # Docker 이미지 빌드
       - name: Build Docker image
-        run: docker build -t myeongseob91/github_action_demo:${{ github.sha }} .
+        run: docker build --build-arg JAR_FILE=${{ env.JAR_PATH }} -t myeongseob91/github_action_demo:${{ github.sha }} .
 
+      # Docker 이미지 푸시
       - name: Push Docker image
         run: docker push myeongseob91/github_action_demo:${{ github.sha }}
 
